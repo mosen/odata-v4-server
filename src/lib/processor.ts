@@ -13,6 +13,7 @@ import * as odata from "./odata";
 import { ResourceNotFoundError, MethodNotAllowedError } from "./error";
 import { ODataServer, ODataHttpContext } from "./server";
 import { IODataResult } from './index';
+import {ParsedQs} from "qs";
 
 const getODataRoot = function (context: ODataHttpContext) {
     return (context.protocol || "http") + "://" + (context.host || "localhost") + (context.base || "");
@@ -395,7 +396,7 @@ class ODataStreamWrapper extends Transform {
         if (typeof done == "function") done();
     }
 
-    protected _flush(done?: Function) {
+    public _flush(done?: Function) {
         if (typeof done == "function") done();
     }
 
@@ -581,7 +582,7 @@ export class ODataProcessor extends Transform {
         }
     }
 
-    protected _flush(done?: Function) {
+    public _flush(done?: Function) {
         if (this.streamEnabled && this.streamObject) {
             if (this.options.objectMode) {
                 let flushObject: any = {
@@ -1594,7 +1595,7 @@ export class ODataProcessor extends Transform {
         }
 
         if (filterParam) {
-            let filterAst = queryString;
+            let filterAst: string | string[] | Token | ParsedQs | ParsedQs[] = queryString;
             let resourceFilterAst = this.resourcePath.ast.value.query && this.resourcePath.ast.value.query.value.options && this.resourcePath.ast.value.query.value.options.find(t => t.type == TokenType.Filter);
             if (typeof filterAst == "string") {
                 filterAst = qs.parse(filterAst).$filter;
@@ -1611,9 +1612,9 @@ export class ODataProcessor extends Transform {
                 filterAst = token && token.value && token.value.options && (<Token[]>token.value.options).find(t => t.type == TokenType.Filter);
             }
             if (filterAst && !include) {
-                filterAst = deepmerge(filterAst, (resourceFilterAst || {}).value || {});
+                filterAst = deepmerge(<Token>filterAst, (resourceFilterAst || {}).value || {});
             }
-            params[filterParam] = this.serverType.connector ? this.serverType.connector.createFilter(filterAst, elementType) : filterAst;
+            params[filterParam] = this.serverType.connector ? this.serverType.connector.createFilter(<Token>filterAst, elementType) : filterAst;
 
             if (container.prototype instanceof ODataControllerBase){
                 const validator = (<typeof ODataControllerBase>container).validator;
